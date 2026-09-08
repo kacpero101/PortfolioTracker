@@ -1,0 +1,44 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(/Users/kacperchudzik/Library/*)",
+      "Read(/Users/kacperchudzik/.ssh/*)",
+      "Read(/Users/kacperchudzik/.gnupg/*)",
+      "Read(/Users/kacperchudzik/.config/*)",
+      "Read(/private/*)",
+      "Read(/etc/*)",
+      "Read(/System/*)",
+      "Read(/usr/*)",
+      "Read(/bin/*)",
+      "Read(/sbin/*)",
+      "Read(/var/*)",
+      "Write(/Users/kacperchudzik/Library/*)",
+      "Write(/Users/kacperchudzik/.ssh/*)",
+      "Write(/private/*)",
+      "Write(/etc/*)",
+      "Write(/System/*)",
+      "Write(/usr/*)",
+      "Edit(/Users/kacperchudzik/Library/*)",
+      "Edit(/Users/kacperchudzik/.ssh/*)",
+      "Edit(/private/*)",
+      "Edit(/etc/*)",
+      "Edit(/System/*)",
+      "Edit(/usr/*)"
+    ]
+  },
+  "sandbox": {
+    "enabled": true,
+    "filesystem": {
+      "denyRead": ["/Users/kacperchudzik"],
+      "allowRead": [
+        "/Users/kacperchudzik/Documents/Nauka/Nauka_AI/Portfolio",
+        "/Users/kacperchudzik/Library/Developer/Xcode/CodingAssistant"
+      ],
+      "denyWrite": ["/Users/kacperchudzik"],
+      "allowWrite": [
+        "/Users/kacperchudzik/Documents/Nauka/Nauka_AI/Portfolio",
+        "/Users/kacperchudzik/Library/Developer/Xcode/CodingAssistant"
+      ]
+    }
+  }
+}
