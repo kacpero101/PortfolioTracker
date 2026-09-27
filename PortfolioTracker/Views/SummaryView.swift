@@ -44,8 +44,12 @@ struct SummaryView: View {
                     .frame(height: 200)
                 }
 
+                if !store.loadWarnings.isEmpty {
+                    messagesBox(title: "Problem z wczytaniem danych", messages: store.loadWarnings)
+                }
+
                 if !store.lastRefreshErrors.isEmpty {
-                    errorsBox
+                    messagesBox(title: "Nie udało się pobrać niektórych danych", messages: store.lastRefreshErrors)
                 }
             }
             .padding()
@@ -78,12 +82,12 @@ struct SummaryView: View {
         }
     }
 
-    private var errorsBox: some View {
+    private func messagesBox(title: String, messages: [String]) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Label("Nie udało się pobrać niektórych cen", systemImage: "exclamationmark.triangle.fill")
+            Label(title, systemImage: "exclamationmark.triangle.fill")
                 .foregroundStyle(.orange)
                 .font(.subheadline.bold())
-            ForEach(store.lastRefreshErrors, id: \.self) { message in
+            ForEach(messages, id: \.self) { message in
                 Text(message)
                     .font(.caption)
                     .foregroundStyle(.secondary)

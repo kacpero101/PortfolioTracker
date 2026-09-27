@@ -19,7 +19,8 @@ Resources/
 PortfolioTracker/
 ├── PortfolioTrackerApp.swift        // punkt wejścia aplikacji
 ├── Models/
-│   ├── Asset.swift                  // pojedyncza pozycja w portfelu
+│   ├── Asset.swift                  // pozycja w portfelu (instrument) + scalanie i migracja
+│   ├── PurchaseLot.swift            // transza zakupu w ramach pozycji
 │   ├── AssetType.swift              // klasy aktywów
 │   └── PortfolioSnapshot.swift      // punkt historii wartości portfela
 ├── Services/
@@ -32,8 +33,9 @@ PortfolioTracker/
     ├── SummaryView.swift            // podsumowanie + wykres kołowy
     ├── AllocationChartView.swift    // wykres kołowy alokacji + wybór kolorów
     ├── HistoryChartView.swift       // wykres liniowy wartości w czasie
-    ├── AssetsView.swift             // lista aktywów
-    └── AddAssetView.swift           // formularz dodawania/edycji
+    ├── AssetsView.swift             // lista pozycji z rozwijanymi transzami
+    ├── AddAssetView.swift           // formularz zakupu / nowej transzy / edycji pozycji
+    └── LotEditView.swift            // edycja i usuwanie pojedynczej transzy
 PortfolioTrackerTests/               // testy jednostkowe (Swift Testing)
 ```
 
@@ -59,19 +61,35 @@ xcodebuild test -project PortfolioTracker.xcodeproj -scheme PortfolioTracker -de
 ```
 
 Testy nie korzystają z sieci. Obejmują parsowanie stron serii EDO, zgodność wsteczną `assets.json`
-oraz wycenę pozycji (ceny ręczne, waluta zakupu, domyślne kolory).
+(stare nazwy klas, migracja do transz, pomijanie pojedynczych nieczytelnych pozycji), operacje na
+transzach, historię oraz wycenę pozycji (ceny ręczne, waluta zakupu, domyślne kolory).
+Dane testów trafiają do folderu tymczasowego - nigdy do prawdziwego portfela.
+
+Opcjonalny test na żywo (pobiera oprocentowanie EDO0936 z obligacjeskarbowe.pl):
+
+```sh
+TEST_RUNNER_LIVE_NETWORK=1 xcodebuild test -project PortfolioTracker.xcodeproj -scheme PortfolioTracker -destination 'platform=macOS'
+```
 
 ## Jak to działa
 
 - **Dodawanie aktywów**: w zakładce „Aktywa” → przycisk „+”. Dla akcji/ETF-ów/krypto podajesz
   ticker (np. `AAPL`, `VOO`, `BTC`, `CDR.WA`). Dla obligacji i gotówki ticker nie jest potrzebny.
   Cenę zakupu podajesz w wybranej walucie zakupu, a aplikacja przelicza ją na USD
-  (wewnętrzna waluta bazowa) po kursie z Yahoo (`PLNUSD=X` itp.).
+  (wewnętrzna waluta bazowa) po kursie z **dnia zakupu** z Yahoo (`PLNUSD=X` itp.). Kurs
+  każdej transzy jest pobierany raz i potem się nie zmienia; ceny ręczne i wycena bieżąca
+  używają bieżącego kursu.
 - **Cena ręczna**: dla akcji, ETF-ów, krypto, złota i srebra możesz wpisać aktualną cenę
-  (w walucie zakupu). Jest używana, gdy aplikacja nie ma pobranej ceny, np. offline albo przy błędnym tickerze.
+  (w wybranej walucie, domyślnie walucie zakupu). Jest używana, gdy aplikacja nie ma pobranej ceny, np. offline albo przy błędnym tickerze.
   Dla obligacji to samo pole oznacza aktualną wartość jednej obligacji.
-- **Edycja i usuwanie**: kliknij pozycję, żeby ją edytować. Usunąć ją możesz przyciskiem „Usuń” w edycji
-  albo gestem przesunięcia na liście. W obu przypadkach aplikacja najpierw prosi o potwierdzenie.
+- **Pozycje i transze**: każdy instrument to jedna pozycja (łączna ilość, średnia cena, wartość,
+  zysk/strata), a kolejne zakupy są jej transzami. Dodanie przez „+” instrumentu, który już jest
+  w portfelu (ten sam typ i ticker — dla krypto `BTC` = `BTC-USD`; gotówka: ta sama waluta;
+  złoto/srebro: jedna pozycja; obligacje: ta sama seria), dopisuje transzę do istniejącej pozycji.
+  Kliknięcie pozycji rozwija listę transz (data, ilość, cena i waluta, zysk/strata transzy).
+- **Edycja i usuwanie**: w rozwiniętej pozycji (lub w menu kontekstowym) możesz dodać transzę,
+  edytować lub usunąć pojedynczą transzę, edytować pozycję albo usunąć ją w całości. Usunięcie
+  ostatniej transzy usuwa pozycję. Każde usunięcie wymaga potwierdzenia.
 - **Pobieranie cen**: raz przy starcie aplikacji (i na żądanie, przyciskiem „Odśwież ceny”)
   aplikacja odpytuje `query1.finance.yahoo.com/v8/finance/chart/{TICKER}` — to publiczny,
   darmowy, ale nieoficjalny endpoint Yahoo Finance (nie wymaga klucza API). Jeśli pobranie
@@ -85,12 +103,18 @@ oraz wycenę pozycji (ceny ręczne, waluta zakupu, domyślne kolory).
   marży na stronie — wtedy wpisz ją ręcznie z listu emisyjnego). Od 2. roku oprocentowanie =
   marża + inflacja, którą wpisujesz ręcznie. Wszystkie pola można też wypełnić ręcznie (np. offline).
   Pobrane stawki są zapamiętywane, bo oprocentowanie ogłoszonej serii się nie zmienia.
+  Jeśli zapiszesz obligację z serią, ale bez oprocentowania, aplikacja pobierze je sama
+  (po zapisie i przy każdym odświeżeniu cen); błąd pobrania pojawi się w podsumowaniu.
 - **Kolory**: kliknij kolor klasy w legendzie wykresu kołowego, żeby wybrać inny z palety.
 - **Dane lokalne**: aktywa i historia wartości portfela są zapisywane jako pliki JSON w
   `~/Library/Application Support/PortfolioTracker/` (bez chmury, bez konta — wszystko lokalnie).
-- **Wykres liniowy**: jeden punkt historii jest zapisywany przy każdym odświeżeniu cen
-  (nadpisywany, jeśli w danym dniu już istnieje) — więc wykres nabierze kształtu po kilku
-  dniach regularnego uruchamiania aplikacji.
+- **Wykres liniowy**: jeden punkt historii dziennie jest zapisywany przy każdym odświeżeniu cen
+  i każdej zmianie pozycji (nadpisywany, jeśli w danym dniu już istnieje). Przycisk
+  „Wyczyść historię” (z potwierdzeniem) usuwa wszystkie punkty i zapisuje świeży punkt z bieżącą wartością.
+- **Zgodność danych**: starsze pliki `assets.json` (jedno aktywo = jeden zakup, stare nazwy klas
+  typu „Kryptowaluta”/„Obligacja”) są wczytywane i zamieniane na pozycje z transzami; przed migracją
+  zapisywana jest kopia `assets.pre-lots-<data>.json`. Nieczytelna pojedyncza pozycja jest pomijana
+  (z kopią oryginalnego pliku `assets.unreadable-<data>.json`), zamiast czyścić cały portfel.
 
 ## Możliwe rozszerzenia na przyszłość
 

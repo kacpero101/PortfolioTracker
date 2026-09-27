@@ -35,6 +35,14 @@ private struct YahooChartResponse: Decodable {
     }
     struct ChartResult: Decodable {
         let meta: Meta
+        let timestamp: [Double]?
+        let indicators: Indicators?
+    }
+    struct Indicators: Decodable {
+        let quote: [QuoteSeries]?
+    }
+    struct QuoteSeries: Decodable {
+        let close: [Double?]?
     }
     struct Meta: Decodable {
         let regularMarketPrice: Double?
@@ -95,6 +103,22 @@ enum QuoteCurrency {
     }
 }
 
+/// Wybór kursu z dnia zakupu z dziennych notowań Yahoo (czysta funkcja).
+enum HistoricalRate {
+
+    /// Zwraca kurs zamknięcia ostatniej sesji, która zaczęła się nie później niż `date`
+    /// (zakup w weekend/święto dostaje kurs z ostatniego dnia notowań). Jeśli wszystkie
+    /// notowania są późniejsze - bierzemy najwcześniejsze. Puste zamknięcia (null) pomijamy.
+    nonisolated static func closeOnOrBefore(_ date: Date, timestamps: [Double], closes: [Double?]) -> Double? {
+        let points = zip(timestamps, closes).compactMap { stamp, close -> (Double, Double)? in
+            guard let close, close > 0 else { return nil }
+            return (stamp, close)
+        }.sorted { $0.0 < $1.0 }
+        let limit = date.timeIntervalSince1970
+        return points.last(where: { $0.0 <= limit })?.1 ?? points.first?.1
+    }
+}
+
 struct PriceService {
 
     /// Pobiera aktualną cenę dla podanego tickera (w walucie notowania - patrz `fetchQuote`).
@@ -144,6 +168,41 @@ struct PriceService {
     static func fetchExchangeRate(from currencyCode: String) async throws -> Double {
         let ticker = "\(currencyCode.uppercased())USD=X"
         return try await fetchPrice(ticker: ticker, type: .stock)
+    }
+
+    /// Kurs waluty względem USD z dnia `date` (np. z dnia zakupu transzy).
+    /// Pobiera dzienne notowania pary XXXUSD=X z okna kilku dni przed tą datą.
+    static func fetchHistoricalExchangeRate(from currencyCode: String, on date: Date) async throws -> Double {
+        let ticker = "\(currencyCode.uppercased())USD=X"
+        let start = Int(date.addingTimeInterval(-10 * 86_400).timeIntervalSince1970)
+        let end = Int(date.addingTimeInterval(86_400).timeIntervalSince1970)
+        guard let url = URL(
+            string: "https://query1.finance.yahoo.com/v8/finance/chart/\(ticker)?interval=1d&period1=\(start)&period2=\(end)"
+        ) else {
+            throw PriceServiceError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.setValue(
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15",
+            forHTTPHeaderField: "User-Agent"
+        )
+        request.timeoutInterval = 15
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw PriceServiceError.invalidResponse
+        }
+
+        let decoded = try JSONDecoder().decode(YahooChartResponse.self, from: data)
+        guard let result = decoded.chart.result?.first,
+              let timestamps = result.timestamp,
+              let closes = result.indicators?.quote?.first?.close,
+              let rate = HistoricalRate.closeOnOrBefore(date, timestamps: timestamps, closes: closes) else {
+            throw PriceServiceError.noData
+        }
+        return rate
     }
 
     /// Zamienia ticker wpisany przez użytkownika na symbol zgodny z Yahoo Finance.

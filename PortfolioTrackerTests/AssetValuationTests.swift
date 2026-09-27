@@ -14,10 +14,11 @@ struct AssetValuationTests {
 
     @Test func manualStockPriceIsInPurchaseCurrencyAndUsedWithoutFetchedPrice() {
         var asset = Asset(name: "CD Projekt", ticker: "CDR.WA", type: .stock, quantity: 2,
-                          purchasePrice: 200, purchaseDate: Date())
-        asset.purchaseCurrency = "PLN"
-        asset.purchaseCurrencyRate = 0.25
+                          purchasePrice: 200, purchaseDate: Date(),
+                          purchaseCurrency: "PLN", purchaseCurrencyRate: 0.25)
         asset.manualCurrentPrice = 240
+        asset.manualPriceCurrency = "PLN"
+        asset.manualPriceCurrencyRate = 0.25
         // 240 PLN × 0,25 = 60 USD za akcję - tak samo jak koszt nabycia i obligacje.
         #expect(asset.currentPrice == 60)
         #expect(asset.currentValue == 120)
