@@ -5,7 +5,7 @@
 //  Definiuje klasy aktywów, które użytkownik może dodać do portfela.
 //
 
-import SwiftUI
+import Foundation
 
 /// Klasa aktywa - decyduje m.in. o tym, czy cena ma być pobierana
 /// automatycznie (akcje, ETF-y, krypto) czy wpisywana ręcznie (gotówka, złoto).
@@ -31,19 +31,6 @@ enum AssetType: String, Codable, CaseIterable, Identifiable {
             return true
         case .bond, .cash, .gold, .silver:
             return false
-        }
-    }
-
-    /// Kolor używany na wykresie kołowym alokacji.
-    var color: Color {
-        switch self {
-        case .stock: return .blue
-        case .etf: return .green
-        case .bond: return .orange
-        case .cash: return .gray
-        case .crypto: return .purple
-        case .gold: return Color(red: 0.85, green: 0.68, blue: 0.10)
-        case .silver: return Color(red: 0.72, green: 0.72, blue: 0.72)
         }
     }
 

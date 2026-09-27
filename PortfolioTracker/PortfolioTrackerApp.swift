@@ -17,6 +17,8 @@ struct PortfolioTrackerApp: App {
             ContentView()
                 .environmentObject(store)
                 .environmentObject(colorStore)
+                // Odświeżenie cen przy starcie (tylko raz, nawet gdy otworzy się kolejne okno).
+                .task { await store.refreshPricesOnLaunch() }
         }
     }
 }

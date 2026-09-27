@@ -12,6 +12,8 @@ struct AssetsView: View {
     @EnvironmentObject private var store: PortfolioStore
     @State private var isShowingAddSheet = false
     @State private var editingAsset: Asset?
+    /// Pozycje wskazane do usunięcia gestem przesunięcia - czekają na potwierdzenie.
+    @State private var assetsPendingDeletion: [Asset] = []
 
     var body: some View {
         VStack {
@@ -29,8 +31,28 @@ struct AssetsView: View {
                             .onTapGesture { editingAsset = asset }
                     }
                     .onDelete { offsets in
-                        store.deleteAssets(at: offsets)
+                        // Zapamiętujemy aktywa (a nie indeksy), bo lista może się zmienić,
+                        // zanim użytkownik potwierdzi usunięcie.
+                        assetsPendingDeletion = offsets.map { store.assets[$0] }
                     }
+                }
+                .confirmationDialog(
+                    deletionTitle,
+                    isPresented: Binding(
+                        get: { !assetsPendingDeletion.isEmpty },
+                        set: { if !$0 { assetsPendingDeletion = [] } }
+                    ),
+                    titleVisibility: .visible
+                ) {
+                    Button("Usuń", role: .destructive) {
+                        assetsPendingDeletion.forEach(store.deleteAsset)
+                        assetsPendingDeletion = []
+                    }
+                    Button("Anuluj", role: .cancel) {
+                        assetsPendingDeletion = []
+                    }
+                } message: {
+                    Text(deletionMessage)
                 }
             }
         }
@@ -49,6 +71,15 @@ struct AssetsView: View {
         .sheet(item: $editingAsset) { asset in
             AddAssetView(assetToEdit: asset)
         }
+    }
+
+    private var deletionTitle: String {
+        assetsPendingDeletion.count > 1 ? "Usunąć zaznaczone pozycje?" : "Usunąć pozycję?"
+    }
+
+    private var deletionMessage: String {
+        let names = assetsPendingDeletion.map(\.name).joined(separator: ", ")
+        return "\(names) - tej operacji nie można cofnąć."
     }
 }
 

@@ -29,6 +29,9 @@ final class PortfolioStore: ObservableObject {
     /// Ustawiane, gdy ktoś poprosi o odświeżenie w trakcie trwającego odświeżania.
     private var refreshRequestedWhileRunning = false
 
+    /// Czy odświeżenie przy starcie aplikacji zostało już uruchomione.
+    private var didRefreshOnLaunch = false
+
     // MARK: - Ścieżki plików
 
     private let assetsFileURL: URL
@@ -112,11 +115,6 @@ final class PortfolioStore: ObservableObject {
         save()
     }
 
-    func deleteAssets(at offsets: IndexSet) {
-        assets.remove(atOffsets: offsets)
-        save()
-    }
-
     /// Modyfikuje aktywo o podanym id (jeśli nadal istnieje) - bez zapisu na dysk.
     private func updateAsset(id: UUID, _ change: (inout Asset) -> Void) {
         guard let index = assets.firstIndex(where: { $0.id == id }) else { return }
@@ -124,6 +122,16 @@ final class PortfolioStore: ObservableObject {
     }
 
     // MARK: - Odświeżanie cen
+
+    /// Odświeża ceny raz po uruchomieniu aplikacji (README: „ceny pobierane przy uruchomieniu”).
+    /// Kolejne wywołania (np. z nowego okna) nic nie robią. Jeśli odświeżanie już trwa
+    /// (np. po dodaniu aktywa), nie kolejkujemy drugiego - bieżące i tak pobierze aktualne ceny.
+    func refreshPricesOnLaunch() async {
+        guard !didRefreshOnLaunch else { return }
+        didRefreshOnLaunch = true
+        guard !assets.isEmpty, !isRefreshing else { return }
+        await refreshPrices()
+    }
 
     /// Pobiera aktualne ceny dla wszystkich aktywów, które mają ticker
     /// i należą do klasy z automatycznym pobieraniem ceny (akcje/ETF-y/krypto).

@@ -36,6 +36,8 @@ struct AddAssetView: View {
     @State private var rateFetchError: String?
     @State private var rateFetchInfo: String?
 
+    @State private var isConfirmingDelete = false
+
     private static let popularCurrencies = [
         "PLN", "USD", "EUR", "GBP", "CHF", "JPY",
         "CZK", "NOK", "SEK", "DKK", "HUF", "UAH"
@@ -127,6 +129,10 @@ struct AddAssetView: View {
                 if type == .bond {
                     bondSection
                 }
+
+                if type.autoFetchesPrice || type == .gold || type == .silver {
+                    manualPriceSection
+                }
             }
             .formStyle(.grouped)
             .onChange(of: type) { _, newType in
@@ -153,10 +159,22 @@ struct AddAssetView: View {
 
                 if assetToEdit != nil {
                     Button("Usuń", role: .destructive) {
-                        if let asset = assetToEdit {
-                            store.deleteAsset(asset)
+                        isConfirmingDelete = true
+                    }
+                    .confirmationDialog(
+                        "Usunąć pozycję?",
+                        isPresented: $isConfirmingDelete,
+                        titleVisibility: .visible
+                    ) {
+                        Button("Usuń", role: .destructive) {
+                            if let asset = assetToEdit {
+                                store.deleteAsset(asset)
+                            }
+                            dismiss()
                         }
-                        dismiss()
+                        Button("Anuluj", role: .cancel) {}
+                    } message: {
+                        Text("\(assetToEdit?.name ?? "Pozycja") - tej operacji nie można cofnąć.")
                     }
                 }
 
@@ -175,15 +193,16 @@ struct AddAssetView: View {
         !name.trimmingCharacters(in: .whitespaces).isEmpty
             && Double(quantityText.replacingOccurrences(of: ",", with: ".")) != nil
             && (type == .cash || Double(purchasePriceText.replacingOccurrences(of: ",", with: ".")) != nil)
+            && (type == .cash || isEmptyOrNumber(manualPriceText))
             && (type != .bond || bondFieldsAreValid)
+    }
+
+    private func isEmptyOrNumber(_ text: String) -> Bool {
+        text.trimmingCharacters(in: .whitespaces).isEmpty || Self.parseNumber(text) != nil
     }
 
     /// Pola obligacji są opcjonalne, ale jeśli coś wpisano, musi to być poprawna wartość.
     private var bondFieldsAreValid: Bool {
-        let isEmptyOrNumber: (String) -> Bool = {
-            $0.trimmingCharacters(in: .whitespaces).isEmpty || Self.parseNumber($0) != nil
-        }
-        guard isEmptyOrNumber(manualPriceText) else { return false }
         guard isEDO else { return true }
         let seriesOK = bondSeriesText.trimmingCharacters(in: .whitespaces).isEmpty
             || EDOSeries.normalize(bondSeriesText) != nil
@@ -256,6 +275,23 @@ struct AddAssetView: View {
         }
     }
 
+    /// Cena ręczna dla aktywów wycenianych automatycznie (akcje, ETF-y, krypto, złoto, srebro).
+    /// Podawana - tak jak cena zakupu i wartość obligacji - w walucie zakupu; przy wycenie
+    /// przeliczana na USD tym samym kursem co koszt nabycia.
+    private var manualPriceSection: some View {
+        Section("Cena ręczna (opcjonalnie)") {
+            TextField(
+                (type == .gold || type == .silver)
+                    ? "Aktualna cena za uncję (\(purchaseCurrency))"
+                    : "Aktualna cena za jednostkę (\(purchaseCurrency))",
+                text: $manualPriceText
+            )
+            Text("Używana, gdy nie ma pobranej ceny (np. brak internetu albo błędny ticker). Cena pobrana automatycznie ma pierwszeństwo.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
     private var currentBondRatePreview: Double? {
         EDOSeries.currentRate(
             purchaseDate: purchaseDate,
@@ -307,7 +343,7 @@ struct AddAssetView: View {
         let purchasePrice = type == .cash
             ? 1.0
             : (Double(purchasePriceText.replacingOccurrences(of: ",", with: ".")) ?? 0)
-        let manualPrice = Double(manualPriceText.replacingOccurrences(of: ",", with: "."))
+        let manualPrice = Self.parseNumber(manualPriceText)
 
         var asset = assetToEdit ?? Asset(
             name: "",
@@ -327,7 +363,13 @@ struct AddAssetView: View {
         asset.quantity = quantity
         asset.purchasePrice = purchasePrice
         asset.purchaseDate = purchaseDate
-        asset.manualCurrentPrice = manualPrice
+        // Dla gotówki pole ceny ręcznej nie jest pokazywane (tam oznacza kurs do USD),
+        // więc nie przenosimy do niej ceny wpisanej wcześniej dla innej klasy aktywa.
+        if type == .cash {
+            if assetToEdit?.type != .cash { asset.manualCurrentPrice = nil }
+        } else {
+            asset.manualCurrentPrice = manualPrice
+        }
         asset.currency = type == .cash ? currency : nil
         // Po zmianie waluty zakupu stary kurs jest nieaktualny (np. PLN->USD zostawiało kurs 0,27
         // i zaniżało koszt nabycia). Nowy kurs zostanie pobrany przy odświeżeniu cen.
