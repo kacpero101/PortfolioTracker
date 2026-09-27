@@ -405,7 +405,8 @@ private struct LotRow: View {
         var text = "\(Formatters.quantity(lot.quantity)) × \(Formatters.money(lot.price, currency: lot.displayCurrency))"
         if lot.displayCurrency != "USD" {
             if let rate = lot.purchaseCurrencyRate {
-                text += String(format: " (kurs %.4f → %@)", rate, Formatters.usd(lot.costBasisUSD))
+                let label = lot.purchaseRateIsHistorical == true ? "kurs z dnia zakupu" : "kurs tymczasowy"
+                text += String(format: " (%@ %.4f → %@)", label, rate, Formatters.usd(lot.costBasisUSD))
             } else {
                 text += " (kurs do USD: jeszcze nie pobrano)"
             }

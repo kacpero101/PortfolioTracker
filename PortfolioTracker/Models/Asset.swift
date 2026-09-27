@@ -33,7 +33,7 @@ struct Asset: Identifiable, Codable, Equatable {
     /// Waluta ceny ręcznej (nil = USD).
     var manualPriceCurrency: String?
 
-    /// Kurs manualPriceCurrency→USD, aktualizowany przy odświeżeniu cen.
+    /// Bieżący kurs manualPriceCurrency→USD, aktualizowany przy odświeżeniu cen.
     var manualPriceCurrencyRate: Double?
 
     /// Ostatnia cena pobrana automatycznie (w USD; dla gotówki: kurs waluty do USD).

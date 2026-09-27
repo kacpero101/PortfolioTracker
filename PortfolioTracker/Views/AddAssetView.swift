@@ -511,7 +511,7 @@ struct AddAssetView: View {
             quantity: quantity,
             price: Self.parseNumber(purchasePriceText) ?? 0,
             purchaseCurrency: purchaseCurrency == "USD" ? nil : purchaseCurrency,
-            // Kurs zostanie pobrany przy odświeżeniu cen (tak jak dotąd).
+            // Kurs z dnia zakupu zostanie pobrany przy odświeżeniu cen.
             purchaseCurrencyRate: nil,
             note: note.isEmpty ? nil : note
         )

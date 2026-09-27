@@ -105,10 +105,14 @@ struct LotEditView: View {
     }
 
     private var rateDescription: String {
-        if purchaseCurrency == lot.displayCurrency, let rate = lot.purchaseCurrencyRate {
-            return String(format: "Kurs %@/USD: %.4f (aktualizowany przy odświeżeniu cen).", purchaseCurrency, rate)
+        let sameDay = Calendar.current.isDate(date, inSameDayAs: lot.date)
+        if purchaseCurrency == lot.displayCurrency, sameDay, let rate = lot.purchaseCurrencyRate {
+            if lot.purchaseRateIsHistorical == true {
+                return String(format: "Kurs %@/USD z dnia zakupu: %.4f.", purchaseCurrency, rate)
+            }
+            return String(format: "Kurs %@/USD: %.4f (tymczasowy - kurs z dnia zakupu zostanie pobrany przy odświeżeniu cen).", purchaseCurrency, rate)
         }
-        return "Kurs \(purchaseCurrency)/USD zostanie pobrany przy odświeżeniu cen."
+        return "Kurs \(purchaseCurrency)/USD z dnia zakupu zostanie pobrany przy odświeżeniu cen."
     }
 
     private var isValid: Bool {
@@ -125,9 +129,12 @@ struct LotEditView: View {
         if !isCash {
             updated.price = AddAssetView.parseNumber(priceText) ?? lot.price
             let newCurrency: String? = purchaseCurrency == "USD" ? nil : purchaseCurrency
-            if newCurrency != lot.purchaseCurrency?.uppercased() {
+            // Inna waluta albo inny dzień zakupu = inny kurs z dnia zakupu - pobierzemy go od nowa.
+            if newCurrency != lot.purchaseCurrency?.uppercased()
+                || !Calendar.current.isDate(date, inSameDayAs: lot.date) {
                 updated.purchaseCurrency = newCurrency
                 updated.purchaseCurrencyRate = nil
+                updated.purchaseRateIsHistorical = nil
             }
         }
         // Brakujący kurs nowej waluty pobierze odświeżenie uruchamiane przez store po zmianie.

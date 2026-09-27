@@ -76,7 +76,9 @@ TEST_RUNNER_LIVE_NETWORK=1 xcodebuild test -project PortfolioTracker.xcodeproj -
 - **Dodawanie aktywów**: w zakładce „Aktywa” → przycisk „+”. Dla akcji/ETF-ów/krypto podajesz
   ticker (np. `AAPL`, `VOO`, `BTC`, `CDR.WA`). Dla obligacji i gotówki ticker nie jest potrzebny.
   Cenę zakupu podajesz w wybranej walucie zakupu, a aplikacja przelicza ją na USD
-  (wewnętrzna waluta bazowa) po kursie z Yahoo (`PLNUSD=X` itp.).
+  (wewnętrzna waluta bazowa) po kursie z **dnia zakupu** z Yahoo (`PLNUSD=X` itp.). Kurs
+  każdej transzy jest pobierany raz i potem się nie zmienia; ceny ręczne i wycena bieżąca
+  używają bieżącego kursu.
 - **Cena ręczna**: dla akcji, ETF-ów, krypto, złota i srebra możesz wpisać aktualną cenę
   (w wybranej walucie, domyślnie walucie zakupu). Jest używana, gdy aplikacja nie ma pobranej ceny, np. offline albo przy błędnym tickerze.
   Dla obligacji to samo pole oznacza aktualną wartość jednej obligacji.

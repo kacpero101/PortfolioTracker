@@ -383,13 +383,43 @@ final class PortfolioStore: ObservableObject {
             }
         }
 
-        // Kursy walut zakupu (per transza) i walut cen ręcznych innych niż USD.
-        for code in Self.foreignCurrencies(in: assets) {
+        // Kurs zakupu każdej transzy w obcej walucie to kurs z dnia zakupu - pobieramy go raz,
+        // potem jest stały (koszt zakupu nie zmienia się razem z bieżącym kursem).
+        var historicalRates: [String: Double] = [:]
+        for asset in assets where asset.type != .cash {
+            for lot in asset.lots where lot.needsHistoricalRate {
+                guard let code = lot.purchaseCurrency?.uppercased() else { continue }
+                let cacheKey = "\(code)|\(Int(lot.date.timeIntervalSince1970 / 86_400))"
+                do {
+                    let rate: Double
+                    if let cached = historicalRates[cacheKey] {
+                        rate = cached
+                    } else {
+                        rate = try await PriceService.fetchHistoricalExchangeRate(from: code, on: lot.date)
+                        historicalRates[cacheKey] = rate
+                    }
+                    updateAsset(id: asset.id) { Self.setPurchaseRate(rate, historical: true, lotID: lot.id, in: &$0) }
+                } catch {
+                    lastRefreshErrors.append(
+                        "\(asset.name): kurs \(code)/USD z dnia zakupu - \(error.localizedDescription)"
+                    )
+                    // Bez żadnego kursu koszt byłby liczony 1:1 - tymczasowo bierzemy bieżący kurs
+                    // (bez oznaczenia jako historyczny, więc przy kolejnym odświeżeniu spróbujemy znowu).
+                    if lot.purchaseCurrencyRate == nil,
+                       let current = try? await usdRate(for: code, cache: &usdRates) {
+                        updateAsset(id: asset.id) { Self.setPurchaseRate(current, historical: false, lotID: lot.id, in: &$0) }
+                    }
+                }
+            }
+        }
+
+        // Ceny ręczne to wycena na dziś - przeliczamy je po bieżącym kursie.
+        for code in Self.manualPriceCurrencies(in: assets) {
             do {
                 let rate = try await usdRate(for: code, cache: &usdRates)
-                Self.apply(rate: rate, forCurrency: code, to: &assets)
+                Self.applyManualPrice(rate: rate, forCurrency: code, to: &assets)
             } catch {
-                lastRefreshErrors.append("Kurs zakupu \(code)/USD: \(error.localizedDescription)")
+                lastRefreshErrors.append("Kurs ceny ręcznej \(code)/USD: \(error.localizedDescription)")
             }
         }
 
@@ -424,30 +454,31 @@ final class PortfolioStore: ObservableObject {
         recordSnapshot()
     }
 
-    /// Waluty (poza USD) użyte w transzach i cenach ręcznych - ich kursy trzeba pobrać.
-    static func foreignCurrencies(in assets: [Asset]) -> Set<String> {
+    /// Waluty (poza USD) cen ręcznych - ich bieżące kursy trzeba pobrać.
+    static func manualPriceCurrencies(in assets: [Asset]) -> Set<String> {
         var codes = Set<String>()
         for asset in assets where asset.type != .cash {
-            for lot in asset.lots {
-                if let code = lot.purchaseCurrency?.uppercased(), !code.isEmpty { codes.insert(code) }
-            }
             if let code = asset.manualPriceCurrency?.uppercased(), !code.isEmpty { codes.insert(code) }
         }
         codes.remove("USD")
         return codes
     }
 
-    /// Ustawia kurs `code`→USD we wszystkich transzach i cenach ręcznych w tej walucie.
-    static func apply(rate: Double, forCurrency code: String, to assets: inout [Asset]) {
-        for index in assets.indices where assets[index].type != .cash {
-            for lotIndex in assets[index].lots.indices
-            where assets[index].lots[lotIndex].purchaseCurrency?.uppercased() == code {
-                assets[index].lots[lotIndex].purchaseCurrencyRate = rate
-            }
-            if assets[index].manualPriceCurrency?.uppercased() == code {
-                assets[index].manualPriceCurrencyRate = rate
-            }
+    /// Ustawia bieżący kurs `code`→USD we wszystkich cenach ręcznych w tej walucie.
+    static func applyManualPrice(rate: Double, forCurrency code: String, to assets: inout [Asset]) {
+        for index in assets.indices
+        where assets[index].type != .cash && assets[index].manualPriceCurrency?.uppercased() == code {
+            assets[index].manualPriceCurrencyRate = rate
         }
+    }
+
+    /// Zapisuje kurs zakupu w transzy `lotID` pozycji `asset`. Kursu z dnia zakupu
+    /// (`historical == true`) nie nadpisujemy już kursem tymczasowym.
+    static func setPurchaseRate(_ rate: Double, historical: Bool, lotID: UUID, in asset: inout Asset) {
+        guard let index = asset.lots.firstIndex(where: { $0.id == lotID }) else { return }
+        if asset.lots[index].purchaseRateIsHistorical == true && !historical { return }
+        asset.lots[index].purchaseCurrencyRate = rate
+        asset.lots[index].purchaseRateIsHistorical = historical
     }
 
     /// Kurs waluty do USD (1 jednostka = x USD) - z `cache` albo pobrany przez `PriceService`.
