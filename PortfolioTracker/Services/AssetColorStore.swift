@@ -21,7 +21,7 @@ final class AssetColorStore: ObservableObject {
         .red,                                           //  5
         Color(red: 0.85, green: 0.10, blue: 0.60),     //  6 – fuksja
         .yellow,                                        //  7
-        .teal,                                          //  8 – domyślny dla Srebra
+        .teal,                                          //  8 – domyślny dla Gotówki
         .indigo,                                        //  9
         Color(red: 0.45, green: 0.45, blue: 0.05),     // 10 – oliwkowy
         .brown,                                         // 11
@@ -35,7 +35,7 @@ final class AssetColorStore: ObservableObject {
     /// (wybory użytkownika są zapisane w UserDefaults i mają pierwszeństwo).
     /// Każda klasa ma inny kolor, żeby dało się je odróżnić na wykresie.
     static let defaultIndices: [AssetType: Int] = [
-        .stock: 0, .etf: 1, .bond: 2, .cash: 3, .crypto: 4, .gold: 12, .silver: 8,
+        .stock: 0, .etf: 1, .bond: 2, .cash: 8, .crypto: 4, .gold: 12, .silver: 3,
     ]
 
     @Published private var colorIndices: [String: Int] = [:]
