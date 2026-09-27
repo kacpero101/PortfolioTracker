@@ -205,6 +205,40 @@ struct PriceService {
         return rate
     }
 
+    /// Miesięczne zamknięcia dla tickera z całej dostępnej historii (np. GC=F od 09.2000).
+    static func fetchMonthlyHistory(ticker: String) async throws -> [GoldPricePoint] {
+        let symbol = ticker.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? ticker
+        guard let url = URL(
+            string: "https://query1.finance.yahoo.com/v8/finance/chart/\(symbol)?interval=1mo&range=max"
+        ) else {
+            throw PriceServiceError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.setValue(
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15",
+            forHTTPHeaderField: "User-Agent"
+        )
+        request.timeoutInterval = 20
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw PriceServiceError.invalidResponse
+        }
+
+        let decoded = try JSONDecoder().decode(YahooChartResponse.self, from: data)
+        guard let result = decoded.chart.result?.first,
+              let timestamps = result.timestamp,
+              let closes = result.indicators?.quote?.first?.close else {
+            throw PriceServiceError.noData
+        }
+        return zip(timestamps, closes).compactMap { stamp, close in
+            guard let close, close > 0 else { return nil }
+            return GoldPricePoint(date: Date(timeIntervalSince1970: stamp), price: close)
+        }
+    }
+
     /// Zamienia ticker wpisany przez użytkownika na symbol zgodny z Yahoo Finance.
     private static func normalizedSymbol(ticker: String, type: AssetType) -> String {
         var symbol = ticker.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()

@@ -28,6 +28,8 @@ struct ContentView: View {
                 }
         }
         .padding()
+        // Delikatne błękitne tło z wykresem ceny złota - czysto dekoracyjne, pod treścią zakładek.
+        .background { GoldBackgroundView() }
     }
 }
 
