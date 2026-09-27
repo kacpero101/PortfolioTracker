@@ -50,7 +50,7 @@ struct GoldBackgroundView: View {
                 .interpolationMethod(.monotone)
                 .foregroundStyle(
                     LinearGradient(
-                        colors: [goldColor.opacity(0.14), goldColor.opacity(0.02)],
+                        colors: [goldColor.opacity(0.07), goldColor.opacity(0.01)],
                         startPoint: .top,
                         endPoint: .bottom
                     )
@@ -61,7 +61,7 @@ struct GoldBackgroundView: View {
                     y: .value("Cena", point.price)
                 )
                 .interpolationMethod(.monotone)
-                .foregroundStyle(goldColor.opacity(colorScheme == .dark ? 0.35 : 0.30))
+                .foregroundStyle(goldColor.opacity(colorScheme == .dark ? 0.175 : 0.15))
                 .lineStyle(StrokeStyle(lineWidth: 1.5))
             }
             // Zapas u góry, żeby szczyt wykresu nie wchodził pod nagłówki zakładek.
@@ -73,7 +73,7 @@ struct GoldBackgroundView: View {
                         if let date = value.as(Date.self) {
                             Text(String(Calendar(identifier: .gregorian).component(.year, from: date)))
                                 .font(.caption2)
-                                .foregroundStyle(.secondary.opacity(0.45))
+                                .foregroundStyle(.secondary.opacity(0.25))
                         }
                     }
                 }
@@ -83,7 +83,7 @@ struct GoldBackgroundView: View {
 
             Text("Złoto, USD/oz · \(yearRange)")
                 .font(.caption2)
-                .foregroundStyle(.secondary.opacity(0.55))
+                .foregroundStyle(.secondary.opacity(0.35))
                 .padding(.trailing, 28)
                 .padding(.bottom, 34)
         }
