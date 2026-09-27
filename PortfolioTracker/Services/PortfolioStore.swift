@@ -149,6 +149,10 @@ final class PortfolioStore: ObservableObject {
             }
         }
 
+        // Kursy walut do USD pobrane w tym odświeżaniu - każdą parę pobieramy tylko raz
+        // (wspólne dla walut notowań, gotówki i walut zakupu).
+        var usdRates: [String: Double] = ["USD": 1.0]
+
         for asset in assets {
             guard asset.type.autoFetchesPrice,
                   let ticker = asset.ticker,
@@ -156,14 +160,33 @@ final class PortfolioStore: ObservableObject {
                 continue
             }
 
+            let quote: Quote
             do {
-                let price = try await PriceService.fetchPrice(ticker: ticker, type: asset.type)
-                updateAsset(id: asset.id) {
-                    $0.fetchedPrice = price
-                    $0.lastPriceUpdate = Date()
-                }
+                quote = try await PriceService.fetchQuote(ticker: ticker, type: asset.type)
             } catch {
                 lastRefreshErrors.append("\(asset.name) (\(ticker)): \(error.localizedDescription)")
+                continue
+            }
+
+            // Yahoo podaje cenę w walucie notowania (np. PLN dla CDR.WA, GBp dla części LSE),
+            // a aplikacja liczy wszystko w USD - przeliczamy, zanim zapiszemy cenę.
+            if let code = QuoteCurrency.requiredRateCurrency(for: quote.currency) {
+                do {
+                    _ = try await usdRate(for: code, cache: &usdRates)
+                } catch {
+                    lastRefreshErrors.append(
+                        "\(asset.name) (\(ticker)): brak kursu \(code)/USD - \(error.localizedDescription)"
+                    )
+                    continue
+                }
+            }
+            guard let usdPrice = QuoteCurrency.priceInUSD(
+                price: quote.price, currency: quote.currency, usdRates: usdRates
+            ) else { continue }
+
+            updateAsset(id: asset.id) {
+                $0.fetchedPrice = usdPrice
+                $0.lastPriceUpdate = Date()
             }
         }
 
@@ -178,7 +201,7 @@ final class PortfolioStore: ObservableObject {
                 continue
             }
             do {
-                let rate = try await PriceService.fetchExchangeRate(from: code)
+                let rate = try await usdRate(for: code, cache: &usdRates)
                 updateAsset(id: asset.id) {
                     $0.fetchedPrice = rate
                     $0.lastPriceUpdate = Date()
@@ -197,7 +220,7 @@ final class PortfolioStore: ObservableObject {
         })
         for code in purchaseCurrencies {
             do {
-                let rate = try await PriceService.fetchExchangeRate(from: code)
+                let rate = try await usdRate(for: code, cache: &usdRates)
                 for index in assets.indices where assets[index].purchaseCurrency?.uppercased() == code {
                     assets[index].purchaseCurrencyRate = rate
                 }
@@ -235,6 +258,15 @@ final class PortfolioStore: ObservableObject {
         lastRefreshDate = Date()
         save()
         recordSnapshot()
+    }
+
+    /// Kurs waluty do USD (1 jednostka = x USD) - z `cache` albo pobrany przez `PriceService`.
+    private func usdRate(for code: String, cache: inout [String: Double]) async throws -> Double {
+        let code = code.uppercased()
+        if let cached = cache[code] { return cached }
+        let rate = try await PriceService.fetchExchangeRate(from: code)
+        cache[code] = rate
+        return rate
     }
 
     // MARK: - Historia wartości portfela
