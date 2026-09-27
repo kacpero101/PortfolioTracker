@@ -15,6 +15,8 @@ PortfolioTracker/
 │   └── PortfolioSnapshot.swift      // punkt historii wartości portfela
 ├── Services/
 │   ├── PriceService.swift           // pobieranie cen z Yahoo Finance
+│   ├── BondRateService.swift        // oprocentowanie serii obligacji EDO z obligacjeskarbowe.pl
+│   ├── AssetColorStore.swift        // kolory klas aktywów
 │   └── PortfolioStore.swift         // logika biznesowa + zapis/odczyt danych (JSON)
 ├── Views/
 │   ├── ContentView.swift            // zakładki główne
@@ -68,6 +70,14 @@ PortfolioTracker/
   darmowy, ale nieoficjalny endpoint Yahoo Finance (nie wymaga klucza API). Jeśli pobranie
   ceny dla danego tickera się nie powiedzie, portfel pokaże ostatnią znaną cenę (lub cenę
   zakupu), a błąd pojawi się w podsumowaniu.
+- **Obligacje skarbowe EDO**: przy klasie „Obligacje” zaznacz „Obligacje skarbowe EDO” i podaj
+  serię (np. `EDO0936` = sprzedaż we wrześniu 2026, wykup we wrześniu 2036 — przycisk
+  „Z daty zakupu” wylicza ją automatycznie). Przycisk „Pobierz oprocentowanie” pobiera ze strony
+  serii na `obligacjeskarbowe.pl` oprocentowanie w 1. roku oraz marżę (starsze serie nie podają
+  marży na stronie — wtedy wpisz ją ręcznie z listu emisyjnego). Od 2. roku oprocentowanie =
+  marża + inflacja, którą wpisujesz ręcznie. Wszystkie pola można też wypełnić ręcznie (np. offline).
+  Pobrane stawki są zapamiętywane, bo oprocentowanie ogłoszonej serii się nie zmienia.
+- **Testy**: `⌘U` w Xcode (target `PortfolioTrackerTests`) — m.in. parsowanie stron serii EDO.
 - **Dane lokalne**: aktywa i historia wartości portfela są zapisywane jako pliki JSON w
   `~/Library/Application Support/PortfolioTracker/` (bez chmury, bez konta — wszystko lokalnie).
 - **Wykres liniowy**: jeden punkt historii jest zapisywany przy każdym odświeżeniu cen

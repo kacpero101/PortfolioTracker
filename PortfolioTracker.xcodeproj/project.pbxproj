@@ -6,8 +6,19 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXContainerItemProxy section */
+		EB632E5C3050418A00BB66CA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = EB632E403050418A00BB66CA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = EB632E473050418A00BB66CA;
+			remoteInfo = PortfolioTracker;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		EB632E483050418A00BB66CA /* PortfolioTracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PortfolioTracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		EB632E563050418A00BB66CA /* PortfolioTrackerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PortfolioTrackerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -16,10 +27,22 @@
 			path = PortfolioTracker;
 			sourceTree = "<group>";
 		};
+		EB632E573050418A00BB66CA /* PortfolioTrackerTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = PortfolioTrackerTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		EB632E453050418A00BB66CA /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EB632E593050418A00BB66CA /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -33,6 +56,7 @@
 			isa = PBXGroup;
 			children = (
 				EB632E4A3050418A00BB66CA /* PortfolioTracker */,
+				EB632E573050418A00BB66CA /* PortfolioTrackerTests */,
 				EB632E493050418A00BB66CA /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,6 +65,7 @@
 			isa = PBXGroup;
 			children = (
 				EB632E483050418A00BB66CA /* PortfolioTracker.app */,
+				EB632E563050418A00BB66CA /* PortfolioTrackerTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -70,6 +95,29 @@
 			productReference = EB632E483050418A00BB66CA /* PortfolioTracker.app */;
 			productType = "com.apple.product-type.application";
 		};
+		EB632E5B3050418A00BB66CA /* PortfolioTrackerTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EB632E603050418A00BB66CA /* Build configuration list for PBXNativeTarget "PortfolioTrackerTests" */;
+			buildPhases = (
+				EB632E583050418A00BB66CA /* Sources */,
+				EB632E593050418A00BB66CA /* Frameworks */,
+				EB632E5A3050418A00BB66CA /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				EB632E5D3050418A00BB66CA /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				EB632E573050418A00BB66CA /* PortfolioTrackerTests */,
+			);
+			name = PortfolioTrackerTests;
+			packageProductDependencies = (
+			);
+			productName = PortfolioTrackerTests;
+			productReference = EB632E563050418A00BB66CA /* PortfolioTrackerTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -82,6 +130,10 @@
 				TargetAttributes = {
 					EB632E473050418A00BB66CA = {
 						CreatedOnToolsVersion = 26.6;
+					};
+					EB632E5B3050418A00BB66CA = {
+						CreatedOnToolsVersion = 26.6;
+						TestTargetID = EB632E473050418A00BB66CA;
 					};
 				};
 			};
@@ -100,12 +152,20 @@
 			projectRoot = "";
 			targets = (
 				EB632E473050418A00BB66CA /* PortfolioTracker */,
+				EB632E5B3050418A00BB66CA /* PortfolioTrackerTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		EB632E463050418A00BB66CA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EB632E5A3050418A00BB66CA /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -122,7 +182,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		EB632E583050418A00BB66CA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		EB632E5D3050418A00BB66CA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = EB632E473050418A00BB66CA /* PortfolioTracker */;
+			targetProxy = EB632E5C3050418A00BB66CA /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		EB632E513050418A00BB66CA /* Debug */ = {
@@ -329,6 +404,44 @@
 			};
 			name = Release;
 		};
+		EB632E5E3050418A00BB66CA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.6;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Kacper.PortfolioTrackerTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PortfolioTracker.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PortfolioTracker";
+			};
+			name = Debug;
+		};
+		EB632E5F3050418A00BB66CA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.6;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Kacper.PortfolioTrackerTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PortfolioTracker.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PortfolioTracker";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -346,6 +459,15 @@
 			buildConfigurations = (
 				EB632E543050418A00BB66CA /* Debug */,
 				EB632E553050418A00BB66CA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		EB632E603050418A00BB66CA /* Build configuration list for PBXNativeTarget "PortfolioTrackerTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EB632E5E3050418A00BB66CA /* Debug */,
+				EB632E5F3050418A00BB66CA /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

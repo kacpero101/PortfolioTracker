@@ -12,6 +12,9 @@ import SwiftUI
 enum AssetType: String, Codable, CaseIterable, Identifiable {
     case stock = "Akcje"
     case etf = "ETF"
+    /// Obligacje (np. skarbowe EDO). Surowa wartość "Obligacje" musi zostać bez zmian -
+    /// jest zapisywana w assets.json, a jej brak uniemożliwia wczytanie starszych danych.
+    case bond = "Obligacje"
     case cash = "Gotówka"
     case crypto = "Kryptowaluty"
     case gold = "Złoto"
@@ -26,7 +29,7 @@ enum AssetType: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .stock, .etf, .crypto:
             return true
-        case .cash, .gold, .silver:
+        case .bond, .cash, .gold, .silver:
             return false
         }
     }
@@ -36,6 +39,7 @@ enum AssetType: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .stock: return .blue
         case .etf: return .green
+        case .bond: return .orange
         case .cash: return .gray
         case .crypto: return .purple
         case .gold: return Color(red: 0.85, green: 0.68, blue: 0.10)
@@ -49,7 +53,7 @@ enum AssetType: String, Codable, CaseIterable, Identifiable {
         case .stock: return "np. AAPL, CDR.WA (dla GPW dodaj .WA)"
         case .etf: return "np. VOO, SPY, IWDA.L"
         case .crypto: return "np. BTC, ETH (dopiszemy -USD automatycznie)"
-        case .cash, .gold, .silver: return "ticker niewymagany"
+        case .bond, .cash, .gold, .silver: return "ticker niewymagany"
         }
     }
 }
