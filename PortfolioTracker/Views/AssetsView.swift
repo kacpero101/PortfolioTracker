@@ -75,6 +75,11 @@ private struct AssetRow: View {
                 Text("\(asset.type.rawValue) · ilość: \(asset.quantity, specifier: "%.4f")")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                if let series = asset.bondSeries {
+                    Text(bondRateDescription(series: series))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Spacer()
@@ -90,6 +95,20 @@ private struct AssetRow: View {
             }
         }
         .padding(.vertical, 4)
+    }
+
+    /// Np. "EDO0936 · oprocentowanie 5.35% · marża 2.00%".
+    private func bondRateDescription(series: String) -> String {
+        var parts = [series]
+        if let rate = asset.currentBondRate {
+            parts.append(String(format: "oprocentowanie %.2f%%", rate))
+        } else {
+            parts.append("oprocentowanie: brak danych")
+        }
+        if let margin = asset.bondMargin {
+            parts.append(String(format: "marża %.2f%%", margin))
+        }
+        return parts.joined(separator: " · ")
     }
 }
 

@@ -26,6 +26,9 @@ final class PortfolioStore: ObservableObject {
     @Published var lastRefreshErrors: [String] = []
     @Published var lastRefreshDate: Date?
 
+    /// Ustawiane, gdy ktoś poprosi o odświeżenie w trakcie trwającego odświeżania.
+    private var refreshRequestedWhileRunning = false
+
     // MARK: - Ścieżki plików
 
     private let assetsFileURL: URL
@@ -114,18 +117,39 @@ final class PortfolioStore: ObservableObject {
         save()
     }
 
+    /// Modyfikuje aktywo o podanym id (jeśli nadal istnieje) - bez zapisu na dysk.
+    private func updateAsset(id: UUID, _ change: (inout Asset) -> Void) {
+        guard let index = assets.firstIndex(where: { $0.id == id }) else { return }
+        change(&assets[index])
+    }
+
     // MARK: - Odświeżanie cen
 
     /// Pobiera aktualne ceny dla wszystkich aktywów, które mają ticker
     /// i należą do klasy z automatycznym pobieraniem ceny (akcje/ETF-y/krypto).
     /// Błąd pojedynczego tickera nie przerywa reszty - jest tylko zbierany do listy błędów.
+    ///
+    /// UWAGA: między kolejnymi `await` użytkownik może dodać/usunąć aktywo, więc po każdym
+    /// pobraniu szukamy pozycji po `id`, a nie po indeksie zapamiętanym przed `await`
+    /// (stary indeks mógł wskazywać inne aktywo albo wyjść poza zakres i wywołać crash).
     func refreshPrices() async {
+        // Nie uruchamiamy dwóch odświeżań naraz - zamiast tego powtarzamy je po zakończeniu
+        // bieżącego (np. gdy użytkownik doda aktywo w trakcie odświeżania).
+        guard !isRefreshing else {
+            refreshRequestedWhileRunning = true
+            return
+        }
         isRefreshing = true
         lastRefreshErrors = []
-        defer { isRefreshing = false }
+        defer {
+            isRefreshing = false
+            if refreshRequestedWhileRunning {
+                refreshRequestedWhileRunning = false
+                Task { await refreshPrices() }
+            }
+        }
 
-        for index in assets.indices {
-            let asset = assets[index]
+        for asset in assets {
             guard asset.type.autoFetchesPrice,
                   let ticker = asset.ticker,
                   !ticker.trimmingCharacters(in: .whitespaces).isEmpty else {
@@ -134,27 +158,31 @@ final class PortfolioStore: ObservableObject {
 
             do {
                 let price = try await PriceService.fetchPrice(ticker: ticker, type: asset.type)
-                assets[index].fetchedPrice = price
-                assets[index].lastPriceUpdate = Date()
+                updateAsset(id: asset.id) {
+                    $0.fetchedPrice = price
+                    $0.lastPriceUpdate = Date()
+                }
             } catch {
                 lastRefreshErrors.append("\(asset.name) (\(ticker)): \(error.localizedDescription)")
             }
         }
 
         // Pobierz kursy walut dla aktywów typu gotówka.
-        for index in assets.indices {
-            let asset = assets[index]
-            guard asset.type == .cash else { continue }
+        for asset in assets where asset.type == .cash {
             let code = (asset.currency ?? "USD").uppercased()
             if code == "USD" {
-                assets[index].fetchedPrice = 1.0
-                assets[index].lastPriceUpdate = Date()
+                updateAsset(id: asset.id) {
+                    $0.fetchedPrice = 1.0
+                    $0.lastPriceUpdate = Date()
+                }
                 continue
             }
             do {
                 let rate = try await PriceService.fetchExchangeRate(from: code)
-                assets[index].fetchedPrice = rate
-                assets[index].lastPriceUpdate = Date()
+                updateAsset(id: asset.id) {
+                    $0.fetchedPrice = rate
+                    $0.lastPriceUpdate = Date()
+                }
             } catch {
                 lastRefreshErrors.append("\(asset.name) (\(code)/USD): \(error.localizedDescription)")
             }
@@ -179,11 +207,10 @@ final class PortfolioStore: ObservableObject {
         }
 
         // Pobierz cenę złota (GC=F) raz i przypisz do wszystkich aktywów złota.
-        let goldIndices = assets.indices.filter { assets[$0].type == .gold }
-        if !goldIndices.isEmpty {
+        if assets.contains(where: { $0.type == .gold }) {
             do {
                 let goldPrice = try await PriceService.fetchPrice(ticker: "GC=F", type: .stock)
-                for index in goldIndices {
+                for index in assets.indices where assets[index].type == .gold {
                     assets[index].fetchedPrice = goldPrice
                     assets[index].lastPriceUpdate = Date()
                 }
@@ -193,11 +220,10 @@ final class PortfolioStore: ObservableObject {
         }
 
         // Pobierz cenę srebra (SI=F) raz i przypisz do wszystkich aktywów srebra.
-        let silverIndices = assets.indices.filter { assets[$0].type == .silver }
-        if !silverIndices.isEmpty {
+        if assets.contains(where: { $0.type == .silver }) {
             do {
                 let silverPrice = try await PriceService.fetchPrice(ticker: "SI=F", type: .stock)
-                for index in silverIndices {
+                for index in assets.indices where assets[index].type == .silver {
                     assets[index].fetchedPrice = silverPrice
                     assets[index].lastPriceUpdate = Date()
                 }
@@ -254,13 +280,38 @@ final class PortfolioStore: ObservableObject {
     }
 
     private func load() {
-        if let data = try? Data(contentsOf: assetsFileURL),
-           let decoded = try? JSONDecoder.iso8601.decode([Asset].self, from: data) {
-            self.assets = decoded
+        if let data = try? Data(contentsOf: assetsFileURL) {
+            do {
+                self.assets = try JSONDecoder.iso8601.decode([Asset].self, from: data)
+            } catch {
+                // Wcześniej błąd dekodowania był cicho ignorowany, a przy następnym zapisie
+                // pusta lista nadpisywała plik - czyli cały portfel przepadał bez śladu.
+                print("Błąd odczytu assets.json: \(error)")
+                backUpUnreadableFile(assetsFileURL)
+            }
         }
-        if let data = try? Data(contentsOf: historyFileURL),
-           let decoded = try? JSONDecoder.iso8601.decode([PortfolioSnapshot].self, from: data) {
-            self.history = decoded
+        if let data = try? Data(contentsOf: historyFileURL) {
+            do {
+                self.history = try JSONDecoder.iso8601.decode([PortfolioSnapshot].self, from: data)
+            } catch {
+                print("Błąd odczytu history.json: \(error)")
+                backUpUnreadableFile(historyFileURL)
+            }
+        }
+    }
+
+    /// Kopiuje nieczytelny plik obok oryginału (np. assets.unreadable-2026-09-27T08-30-00Z.json),
+    /// żeby nie został nadpisany przy najbliższym zapisie i dało się odzyskać dane.
+    private func backUpUnreadableFile(_ url: URL) {
+        let stamp = ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "-")
+        let backupURL = url.deletingPathExtension()
+            .appendingPathExtension("unreadable-\(stamp)")
+            .appendingPathExtension(url.pathExtension)
+        do {
+            try FileManager.default.copyItem(at: url, to: backupURL)
+            print("Zapisano kopię nieczytelnego pliku: \(backupURL.path)")
+        } catch {
+            print("Nie udało się zapisać kopii \(url.lastPathComponent): \(error)")
         }
     }
 }

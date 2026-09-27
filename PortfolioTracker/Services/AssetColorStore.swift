@@ -32,7 +32,7 @@ final class AssetColorStore: ObservableObject {
     ]
 
     private static let defaultIndices: [AssetType: Int] = [
-        .stock: 0, .etf: 1, .cash: 3, .crypto: 4, .gold: 12, .silver: 3,
+        .stock: 0, .etf: 1, .bond: 2, .cash: 3, .crypto: 4, .gold: 12, .silver: 3,
     ]
 
     @Published private var colorIndices: [String: Int] = [:]
