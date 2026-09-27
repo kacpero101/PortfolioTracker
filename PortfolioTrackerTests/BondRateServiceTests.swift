@@ -152,12 +152,13 @@ struct BondRateServiceTests {
 
     @Test func manualBondPriceIsConvertedToUSDLikeCostBasis() {
         var asset = Asset(name: "EDO", ticker: nil, type: .bond, quantity: 10,
-                          purchasePrice: 100, purchaseDate: Date())
-        asset.purchaseCurrency = "PLN"
-        asset.purchaseCurrencyRate = 0.25
+                          purchasePrice: 100, purchaseDate: Date(),
+                          purchaseCurrency: "PLN", purchaseCurrencyRate: 0.25)
         // Bez ceny ręcznej wartość = koszt, więc zysk wynosi 0 (a nie +300%).
         #expect(asset.currentValue == asset.costBasis)
         asset.manualCurrentPrice = 110
+        asset.manualPriceCurrency = "PLN"
+        asset.manualPriceCurrencyRate = 0.25
         #expect(asset.currentValue == 275)
     }
 }
