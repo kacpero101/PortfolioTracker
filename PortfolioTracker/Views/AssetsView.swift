@@ -87,6 +87,8 @@ struct AssetsView: View {
                         positionsPendingDeletion = offsets.map { store.assets[$0] }
                     }
                 }
+                // Przezroczysta lista, żeby było widać tło okna (GoldBackgroundView).
+                .scrollContentBackground(.hidden)
                 .confirmationDialog(
                     positionDeletionTitle,
                     isPresented: Binding(
