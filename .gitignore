@@ -131,3 +131,11 @@ iOSInjectionProject/
 **/xcshareddata/WorkspaceSettings.xcsettings
 
 # End of https://www.toptal.com/developers/gitignore/api/xcode,swift,macos
+
+# Archiwa projektu
+PortfolioTracker.zip
+
+# Lokalna konfiguracja Claude Code
+.claude/settings.json
+.claude/settings.local.json
+.claude/worktrees/
